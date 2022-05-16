@@ -1,0 +1,106 @@
+<project name="web3" default="build">
+    <!-- использование файла свойств (параметры) -->
+    <property file="build.properties"/>
+	<path id="libs.main.module">
+        <fileset dir="lib">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <!-- компиляция исходных кодов проекта -->
+    <target name="compile">
+        <mkdir dir="${target}/classes"/>
+        <javac srcdir="${src}/java" destdir="${target}/classes" includeantruntime="false">
+            <classpath>
+				<path refid="libs.main.module"/>	
+			</classpath>
+        </javac>
+
+		<copy todir="${target}/classes">
+			<fileset dir="${src}/resources"/> 
+		</copy>
+
+        <mkdir dir="${target}/webapp"/>
+		<copy todir="${target}/webapp">
+			<fileset dir="${src}/webapp"/> 
+		</copy>
+    </target>
+
+    <!-- компиляция кодов проекта и упаковка в исполняемый jar-архив -->
+	<target name="build" depends="compile">
+		<jar destfile="${target}${file.jar}" basedir="${target}/classes">
+			<manifest>
+                <attribute name="Main-Class" value="${mainClass}"/>
+                <attribute name="package-Version" value="1.0"/>
+            </manifest>
+        </jar>
+        <manifest file="MANIFEST.MF">
+            <attribute name="main-Class" value="${mainClass}"/>
+            <attribute name="package-Version" value="1.0"/>
+        </manifest>
+	</target>
+
+    <!-- удаление скомпилированных классов проекта и всех временных файлов -->
+	<target name="clean">
+		<delete dir="${target}"/>
+        <delete dir="${reports}"/>
+        <delete file="MANIFEST.MF"/>
+        <delete dir="altsrc/"/>
+        <delete dir="altTarget/"/>
+	</target>
+
+    <!-- запуск junit-тестов проекта -->
+	<target name="test" depends="build">
+        <mkdir dir="${target}/tests"/>
+        <javac srcdir="${tests}/java" destdir="${target}/tests" includeantruntime="false">
+            <classpath>
+				<path refid="libs.main.module"/>
+				<pathelement location="${target}/classes"/>
+			</classpath>
+        </javac>
+
+		<mkdir dir="reports"/>
+        <junit fork="true" printsummary="on">
+            <formatter type="plain"/>
+            <classpath>
+                <path refid="libs.main.module"/>
+                <pathelement location="${target}/classes"/>
+                <pathelement location="${target}/tests"/>
+            </classpath>
+            <batchtest todir="reports">
+                <fileset dir="${test}/java" includes="*.java"/>
+            </batchtest>
+        </junit>
+    </target>
+
+    <!-- воспроизведение музыки по завершении сборки -->
+    <target name="music" depends="build">
+        <sound>
+            <success source="music/vi-ka_papich.wav" duration="16000"/>
+        </sound>
+    </target>
+
+    <!-- создаёт альтернативную версию программы с измененными именами переменных и классов -->
+    <target name="alt">
+        <mkdir dir="${alt}"/>
+        <copy todir="${altsrc}">
+            <fileset dir="${src}"/>
+        </copy>
+
+        <replaceregexp match="${package}" replace="${altpackage}">
+            <fileset dir="${altsrc}"/>
+        </replaceregexp>
+
+        <replace dir="${altsrc}${java}" includes="**/*.java" propertyFile="build.properties">
+            <replacefilter token="${classToReplace}" property="classReplaced"/>
+            <replacefilter token="${varToReplace}" property="varReplaced"/>
+        </replace>
+
+        <move file="${altsrc}${java}/dao/${classToReplace}.java" tofile="${altsrc}${java}/dao/${classReplaced}.java"/>
+        <antcall target="build" inheritRefs="true">
+            <param name="src" value="${altsrc}"/>
+            <param name="target" value="alt${target}"/>
+            <param name="file.jar" value="alt${file.jar}"/>
+        </antcall>
+    </target>
+</project>
